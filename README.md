@@ -1,6 +1,6 @@
 # 🎉 CommUnity – Event Management App
 
-CommUnity is a full-stack event discovery and planning platform built for local communities. This application helps users explore nearby events based on their interests, location, and budget — while offering local organizers a streamlined way to promote and manage their events.
+CommUnity is a full-stack event discovery and planning platform built for local communities. This application helps users explore nearby events based on their interests, location, and budget, while offering local organizers a streamlined way to promote and manage their events.
 
 > 🧪 This is the MVP prototype developed for the ADM3713 course at the University of Ottawa. It was built collaboratively using Agile Scrum methodology.
 
@@ -56,11 +56,11 @@ git clone https://github.com/your-username/community-app.git
 cd community-app
 
 # Install dependencies
-pnpm install
+npm install
 
 # Set up local environment variables (see .env.example)
 cp .env.example .env
 
 # Run the development server
-pnpm dev
+npm dev
 Ensure PostgreSQL is running and migrations are applied using npx prisma migrate dev.
