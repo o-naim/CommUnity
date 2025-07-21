@@ -1,0 +1,308 @@
+// CommUnity Database Schema
+// PostgreSQL database with Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // OAuth fields
+  oauthProvider String?
+  oauthId       String?
+
+  // Subscription
+  subscriptionType UserSubscriptionType @default(FREE)
+  subscriptionId   String?
+  subscriptionEndsAt DateTime?
+
+  // Profile
+  bio          String?
+  location     String?
+  interests    String[]
+  language     String @default("fr")
+
+  // Relations
+  events           Event[]
+  eventRegistrations EventRegistration[]
+  groups           Group[]
+  groupMemberships GroupMembership[]
+  reviews          Review[]
+  favorites        Favorite[]
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Event details
+  startDate   DateTime
+  endDate     DateTime?
+  location    String
+  address     String?
+  latitude    Float?
+  longitude   Float?
+  
+  // Pricing
+  price       Float    @default(0)
+  currency    String   @default("CAD")
+  maxAttendees Int?
+  
+  // Categories and tags
+  category    EventCategory
+  tags        String[]
+  
+  // Status
+  status      EventStatus @default(DRAFT)
+  isPublic    Boolean     @default(true)
+  isPremiumOnly Boolean   @default(false)
+  
+  // Media
+  images      String[]
+  
+  // Organizer
+  organizerId String
+  organizer   User   @relation(fields: [organizerId], references: [id])
+  
+  // Relations
+  registrations EventRegistration[]
+  reviews       Review[]
+  favorites     Favorite[]
+  
+  @@map("events")
+}
+
+model EventRegistration {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+  
+  status  RegistrationStatus @default(CONFIRMED)
+  
+  // Payment
+  paymentId     String?
+  paymentStatus PaymentStatus @default(PENDING)
+  amountPaid    Float?
+  
+  @@unique([userId, eventId])
+  @@map("event_registrations")
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Group settings
+  isPublic    Boolean @default(true)
+  isPremiumOnly Boolean @default(false)
+  maxMembers  Int?
+  
+  // Media
+  avatar      String?
+  banner      String?
+  
+  // Creator
+  creatorId   String
+  creator     User   @relation(fields: [creatorId], references: [id])
+  
+  // Relations
+  memberships GroupMembership[]
+  
+  @@map("groups")
+}
+
+model GroupMembership {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id])
+  
+  role    GroupRole @default(MEMBER)
+  
+  @@unique([userId, groupId])
+  @@map("group_memberships")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // 1-5 stars
+  comment   String?
+  createdAt DateTime @default(now())
+  
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+  
+  @@unique([userId, eventId])
+  @@map("reviews")
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+  
+  @@unique([userId, eventId])
+  @@map("favorites")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  
+  // Optional references
+  eventId String?
+  groupId String?
+  
+  @@map("notifications")
+}
+
+model OrganizerSubscription {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  organizerId String @unique
+  
+  type      OrganizerSubscriptionType
+  status    SubscriptionStatus @default(ACTIVE)
+  
+  // Billing
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  
+  @@map("organizer_subscriptions")
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  amount   Float
+  currency String @default("CAD")
+  
+  // Stripe
+  stripePaymentIntentId String?
+  
+  // Commission
+  commissionRate Float?
+  commissionAmount Float?
+  
+  // References
+  eventId String?
+  userId  String?
+  
+  status PaymentStatus @default(PENDING)
+  
+  @@map("payments")
+}
+
+// Enums
+enum UserSubscriptionType {
+  FREE
+  PREMIUM
+}
+
+enum EventCategory {
+  MUSIC
+  FOOD
+  TECH
+  SPORT
+  ART
+  BUSINESS
+  EDUCATION
+  HEALTH
+  COMMUNITY
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  CONFIRMED
+  CANCELLED
+  WAITLIST
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum GroupRole {
+  MEMBER
+  MODERATOR
+  ADMIN
+}
+
+enum NotificationType {
+  EVENT_REMINDER
+  EVENT_UPDATE
+  NEW_EVENT
+  GROUP_INVITATION
+  PAYMENT_CONFIRMATION
+  SYSTEM
+}
+
+enum OrganizerSubscriptionType {
+  BASIC
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  INCOMPLETE
+}
